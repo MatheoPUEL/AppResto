@@ -1,5 +1,4 @@
 package restoswing;
-
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -38,10 +37,9 @@ public class RestoSwing extends javax.swing.JFrame {
     // Charge les commandes en attente depuis l'API et remplit le JTable
     private void chargerCommandes() {
         try {
-            java.net.URL url = new java.net.URL("http://localhost/Projets/RepoProjectBTS/RestoWeb/Site/api/commande_en_attente.php");
+            java.net.URL url = new java.net.URL("http://localhost/projets/RepoProjectBTS/AppResto/RestoWeb/api/commande_en_attente.php");
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-
             java.io.BufferedReader reader = new java.io.BufferedReader(
                 new java.io.InputStreamReader(conn.getInputStream())
             );
@@ -53,18 +51,16 @@ public class RestoSwing extends javax.swing.JFrame {
             reader.close();
 
             org.json.JSONArray tableau = new org.json.JSONArray(sb.toString());
-
-            String[] colonnes = {"ID", "Date", "Prix", "Type", "Etat", "Client ID"};
-            Object[][] data = new Object[tableau.length()][6];
+            String[] colonnes = {"ID", "Date", "Prix", "État", "Nb Produits"};
+            Object[][] data = new Object[tableau.length()][5];
 
             for (int i = 0; i < tableau.length(); i++) {
                 org.json.JSONObject commande = tableau.getJSONObject(i);
                 data[i][0] = commande.getInt("id");
                 data[i][1] = commande.getString("date");
-                data[i][2] = commande.getDouble("prix");
-                data[i][3] = commande.getString("type");
-                data[i][4] = commande.getInt("etat");
-                data[i][5] = commande.getInt("idUtil");
+                data[i][2] = commande.getDouble("prix") + " €";
+                data[i][3] = commande.getString("etat");
+                data[i][4] = commande.getInt("nbProduits");
             }
 
             javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(data, colonnes);
@@ -79,11 +75,10 @@ public class RestoSwing extends javax.swing.JFrame {
     private void afficherDetails(int idCommande) {
         try {
             java.net.URL url = new java.net.URL(
-                "http://localhost/Projets/RepoProjectBTS/RestoWeb/Site/api/commande_detail.php?id_commande=" + idCommande
+                "http://localhost/projets/RepoProjectBTS/AppResto/RestoWeb/api/commande_detail.php?id_commande=" + idCommande
             );
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-
             java.io.BufferedReader reader = new java.io.BufferedReader(
                 new java.io.InputStreamReader(conn.getInputStream())
             );
@@ -95,10 +90,8 @@ public class RestoSwing extends javax.swing.JFrame {
             reader.close();
 
             org.json.JSONArray tableau = new org.json.JSONArray(sb.toString());
-
             String[] colonnes = {"Produit", "Quantité", "Prix HT"};
             Object[][] data = new Object[tableau.length()][3];
-
             for (int i = 0; i < tableau.length(); i++) {
                 org.json.JSONObject ligneObj = tableau.getJSONObject(i);
                 data[i][0] = ligneObj.getString("libProduit");
@@ -110,15 +103,82 @@ public class RestoSwing extends javax.swing.JFrame {
             javax.swing.JTable tableDetails = new javax.swing.JTable(model);
             javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(tableDetails);
 
+            // Panneau pour les boutons
+            javax.swing.JPanel panelBoutons = new javax.swing.JPanel();
+            panelBoutons.setLayout(new java.awt.FlowLayout());
+
+            // Bouton Accepter
+            javax.swing.JButton btnAccepter = new javax.swing.JButton("Accepter");
+            btnAccepter.addActionListener(evt -> {
+                etatAccepter(idCommande);
+                ((javax.swing.JDialog) javax.swing.SwingUtilities.getWindowAncestor(btnAccepter)).dispose();
+            });
+
+            // Bouton Refuser
+            javax.swing.JButton btnRefuser = new javax.swing.JButton("Refuser");
+            btnRefuser.addActionListener(evt -> {
+                etatRefuser(idCommande);
+                ((javax.swing.JDialog) javax.swing.SwingUtilities.getWindowAncestor(btnRefuser)).dispose();
+            });
+
+            // Bouton Terminer
+            javax.swing.JButton btnTerminer = new javax.swing.JButton("Terminer");
+            btnTerminer.addActionListener(evt -> {
+                etatTerminer(idCommande);
+                ((javax.swing.JDialog) javax.swing.SwingUtilities.getWindowAncestor(btnTerminer)).dispose();
+            });
+
+            panelBoutons.add(btnAccepter);
+            panelBoutons.add(btnRefuser);
+            panelBoutons.add(btnTerminer);
+
+            // Dialog
             javax.swing.JDialog dialog = new javax.swing.JDialog(this, "Détails commande #" + idCommande, true);
-            dialog.add(scroll);
-            dialog.setSize(400, 300);
+            dialog.setLayout(new java.awt.BorderLayout());
+            dialog.add(scroll, java.awt.BorderLayout.CENTER);
+            dialog.add(panelBoutons, java.awt.BorderLayout.SOUTH);
+            dialog.setSize(550, 430);
             dialog.setLocationRelativeTo(this);
             dialog.setVisible(true);
 
         } catch (Exception ex) {
             javax.swing.JOptionPane.showMessageDialog(this, "Erreur de connexion à l'API : " + ex.getMessage());
         }
+    }
+
+    public void changerEtat(String fichier, int idCommande) {
+        try {
+            java.net.URL url = new java.net.URL("http://localhost/projets/RepoProjectBTS/AppResto/RestoWeb/api/" + fichier + ".php?id_commande=" + idCommande);
+            System.out.println(url);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(conn.getInputStream())
+            );
+        } catch(Exception ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Erreur de connexion à l'API : " + ex.getMessage());
+        }
+
+    }
+    /* 
+    Structure classique des fonctions. Message d'information -> appel de la fonction pour changer l'état avec les paramètres (nom du fichier, id de la commande qui est déjà donné) -> recharger la liste pour mettre à jour les informations
+    */
+    public void etatAccepter(int idCommande) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Commande #" + idCommande + " acceptée");
+        changerEtat("commande_accepter", idCommande);
+        chargerCommandes();
+    }
+
+    public void etatRefuser(int idCommande) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Commande #" + idCommande + " refusée");
+        changerEtat("commande_refuser", idCommande);
+        chargerCommandes();
+    }
+
+    public void etatTerminer(int idCommande) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Commande #" + idCommande + " terminée");
+        changerEtat("commande_terminer", idCommande);
+        chargerCommandes();
     }
 
     /**
@@ -159,27 +219,24 @@ public class RestoSwing extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(68, 68, 68)
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jButton5)
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 489, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 115, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton3)
-                .addGap(93, 93, 93))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(83, 83, 83)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 357, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(137, 137, 137)
-                        .addComponent(jButton3)))
-                .addGap(18, 18, 18)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 357, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton3))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton5)
-                .addContainerGap(114, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
